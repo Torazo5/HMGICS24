@@ -38,7 +38,8 @@ def find_pad(tello):
     print("Mission pad not found after completing the search pattern.")
     return False  # Indicate that no pad was found
 
-def get_average_pad_coordinates(duration=2):
+
+def get_average_pad_coordinates(duration):
     x_values, y_values, z_values = [], [], []
     start_time = time.time()
     while time.time() - start_time < duration:
@@ -64,65 +65,6 @@ def get_average_pad_coordinates(duration=2):
     avg_z = int(sum(z_values) / len(z_values))
 
     return avg_x, avg_y, avg_z
-def pre_flip(tello):
-    try:
-
-
-        print("Continuing to move forward slowly...")
-        while True:
-            pad_id = tello.get_mission_pad_id()
-            if pad_id != -1:  # Mission pad detected
-                print(f"Mission pad {pad_id} detected. Averaging coordinates for 2 seconds...")
-                avg_x, avg_y, avg_z = get_average_pad_coordinates()
-
-                if avg_x is None or avg_y is None or avg_z is None:
-                    print("Failed to calculate average mission pad coordinates. Retrying...")
-                    continue
-
-                print(f"Averaged pad position - X: {avg_x}, Y: {avg_y}, Z: {avg_z}")
-
-                # Stage 1: Fly above the mission pad
-                print(f"Flying above mission pad at relative position - X: {avg_x}, Y: {avg_y}, Z: 40 (constant above)")
-                speed = 30  # Speed in cm/s
-
-                # Calculate overshoot-adjusted position
-                overshoot_m = 0.8
-                adjusted_x = round(avg_x * overshoot_m)
-                adjusted_y = round(avg_y * overshoot_m)
-                adjusted_z = round(-1 * avg_z + 50)  # Z offset remains constant
-
-                # Move the drone to the overshoot-adjusted position
-                tello.go_xyz_speed(adjusted_x, adjusted_y, adjusted_z, speed)
-                print("Flying to position above the mission pad...")
-                time.sleep(2)  # Allow time to reach the position
-                break  # Exit after successful positioning
-
-            # Slowly move forward
-            time.sleep(0.5)  # Pause to prevent constant polling
-
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        tello.land()  # Emergency landing in case of a critical error
-
-    finally:
-        # Ensure the drone stops moving
-        tello.send_rc_control(0, 0, 0, 0)
-
-# Initialize and connect to the Tello drone
-tello = Tello()
-tello.connect()
-
-# Enable mission pad detection
-tello.enable_mission_pads()
-tello.set_mission_pad_detection_direction(0)  # 0: detect both directions
-
-# Print battery level
-print(f'Battery level: {tello.get_battery()}%')
-MOVEMENT_THRESHOLD = 20  # Minimum displacement (cm) required to initiate movement
-CENTERING_THRESHOLD = 5  # Threshold for centering on a pad
-SPEED = 30  # Movement speed in cm/s
-NO_MOVEMENT_TIMEOUT = 7  # Time in seconds before initiating landing due to no movement
-
 def initiate_landing_sequence(tello):
     no_pad_start_time = None  # Track the time when no pad is detected
     current_height = tello.get_height()  # Get the current height of the drone
@@ -215,59 +157,16 @@ def initiate_landing_sequence(tello):
             print(f"An error occurred during the flight: {e}")
             tello.land()
             return
+        
+tello = Tello()
+tello.connect()
 
+# Enable mission pad detection
+tello.enable_mission_pads()
+tello.set_mission_pad_detection_direction(0)  # 0: detect both directions
 
-# Takeoff
 tello.takeoff()
-
-#step1
-try:
-    #state 1
-
-
-    tello.go_xyz_speed(110, -80, 0, 50)
-    initiate_landing_sequence(tello)
-    time.sleep(8)
-    tello.takeoff()
-    tello.go_xyz_speed(-110, 80, 0, 50)
-    time.sleep(1)
-    pre_flip(tello)
-    tello.flip_left()
-    time.sleep(1)
-    tello.move_right(40)
-    tello.move_up(20)
-
-    pre_flip(tello)
-
-
-    #state 2
-
-    tello.rotate_clockwise(90)
-    tello.go_xyz_speed(+160, -120, 0, 50)
-    initiate_landing_sequence(tello)
-    # tello.land()
-    time.sleep(8)
-    tello.takeoff()
-    tello.go_xyz_speed(-160, +120, 0, 50)
-    time.sleep(1)
-    pre_flip(tello)
-    tello.flip_left()
-
-    #state 3
-    tello.rotate_clockwise(90)
-    tello.go_xyz_speed(100, -70, 0, 50)
-    tello.go_xyz_speed(100, -70, 0, 50)
-    initiate_landing_sequence(tello)
-    time.sleep(8)
-    tello.takeoff()
-    tello.go_xyz_speed(-110, 80, 0, 50)
-    time.sleep(1)
-    pre_flip(tello)
-    tello.flip_left()
-    tello.land()
-
-
-
-finally:
-    tello.disable_mission_pads()
-    tello.end()
+time.sleep(1)
+# tello.go_xyz_speed(20,40,0,10)
+# tello.land()
+initiate_landing_sequence(tello)
